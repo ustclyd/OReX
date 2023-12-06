@@ -8,8 +8,8 @@ from Mesher import *
 from Mesher import handle_meshes
 from Trainer import Trainer
 
-
 def main():
+    print('output_path in main: ', output_path)
     os.makedirs(output_path, exist_ok=True)
     os.makedirs(path.join(output_path, 'models', ''), exist_ok=True)
     os.makedirs(path.join(output_path + 'checkpoints', ''), exist_ok=True)
@@ -70,3 +70,29 @@ if __name__ == '__main__':
         with open(output_path + 'stats.json', 'w') as f:
             f.write(stats_str)
         print(f'Done. Artifacts at:{output_path}')
+
+    # if args.seed >= 0:
+    #     random.seed(args.seed)
+    #     np.random.seed(args.seed)
+    #     torch.manual_seed(args.seed)
+    # output_dir = output_path
+    # for filename in os.listdir(args.input):
+        
+    #     output_path = path.join(output_dir, filename[:-4])
+    #     print('filename: ', filename[:-4])
+    #     print(output_path)
+    #     try:
+    #         with StatsMgr.timer('main'):
+    #             main(filename)
+
+    #     except Exception as e:
+    #         print('X' * 50)
+    #         print(f"an error has occurred: {e}")
+    #         traceback.print_exc()
+    #         print('X' * 50)
+
+    #     finally:
+    #         stats_str = StatsMgr.get_str()
+    #         with open(output_path + 'stats.json', 'w') as f:
+    #             f.write(stats_str)
+    #         print(f'Done. Artifacts at:{output_path}')

@@ -95,6 +95,8 @@ def sample_plane(plane, refinment_level):
 
     return pca.inverse_transform(np.concatenate((xys_around_contour, xys_on_contour))), np.concatenate(
         (labels_around_contour, labels_on_contour))
+    # xyz: (n_points, 3)
+    # labels: (n_points, )
 
 
 def sample_hull(csl):

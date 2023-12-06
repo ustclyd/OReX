@@ -17,11 +17,11 @@ class SlicesDataset(Dataset):
         self.size = len(self.xyzs)
 
     @classmethod
-    def from_csl(cls, csl, gen):
+    def from_csl(cls, csl, gen): # gen: index of refinement
 
         data = [sample_plane(plane, gen) for plane in csl.planes]
         xyzs_list, labels_list = list(zip(*data))
-        boundary = sample_hull(csl)
+        boundary = sample_hull(csl) # xyzs (n_point_boundary, 3)
 
         return cls(np.concatenate(xyzs_list), np.concatenate(labels_list), boundary)
 

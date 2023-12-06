@@ -1,6 +1,8 @@
 import argparse
 import os
 
+import shutil
+import pyvista as pv
 import numpy as np
 import trimesh
 from matplotlib.path import Path
@@ -11,6 +13,9 @@ from tqdm import tqdm
 
 from Dataset.CSL import CSL, ConnectedComponent, Plane
 from Dataset.Helpers import plane_origin_from_params
+from kbr_slice import read_kbr_mesh, read_kbr_plane
+from kbr_plane import make_plane_transform
+from xml_reader import parseXml
 
 
 def _get_verts_faces(filename):
@@ -21,7 +26,6 @@ def _get_verts_faces(filename):
 
     verts -= np.mean(verts, axis=0)
     scale = 1.1
-
     verts /= scale * np.max(np.absolute(verts))
 
     return verts, faces
@@ -43,6 +47,76 @@ def make_csl_from_mesh(filename, save_path, n_slices):
     _save_sliced_mesh(csl, faces, model_name, save_path, verts)
     return csl
 
+def make_csl_from_kbr(file_path, save_path, mode):
+    info_list, cali_info, mesh_text = parseXml(file_path)
+    # print(info_list[1]['sid'])
+    verts, faces, = read_kbr_mesh(mesh_text[mode])
+    plane_vector = np.mean(verts, axis=0)
+    verts -= plane_vector
+    # print(plane_vector)
+    plane_scale = 1.1
+    plane_scale *= np.max(np.absolute(verts))
+    # # print(plane_scale)
+    verts /= plane_scale
+    # print(verts)
+    model_name = 'kbr_'+mode+'_heart_' + info_list[0]['sid']
+
+    plane_normals, ds = _get_kbr_planes(info_list, cali_info, plane_scale, plane_vector, mode)
+    plane_origins = [plane_origin_from_params((*n, d)) for n, d in zip(plane_normals, ds)]
+
+
+    # poly_faces = [[3, a, b, c ] for a, b, c in faces]
+    # mesh_poly = pv.PolyData(verts, poly_faces)
+    # pl = pv.Plotter()
+    # pl.add_mesh(mesh_poly, show_edges=True, color= 'red')
+    # pl.add_axes(line_width=5)
+    # for normal, origin in zip(plane_normals, plane_origins):
+    #     pl.add_mesh(pv.Plane(origin, normal))
+    # pl.show()
+
+    ccs_per_plane = [cross_section(verts, faces, plane_orig=o, plane_normal=n) for o, n in tqdm(list(zip(plane_origins, plane_normals)))]
+    
+    csl = _csl_from_mesh(model_name, plane_origins, plane_normals, ds, ccs_per_plane)
+
+    _save_sliced_mesh(csl, faces, model_name, save_path, verts)
+    return csl
+
+def make_csl_from_kbr_without_ref(file_path, save_path, mode):
+    info_list, cali_info, mesh_text = parseXml(file_path)
+    # print(info_list[1]['sid'])
+    verts, faces, = read_kbr_mesh(mesh_text[mode])
+    plane_vector = np.zeros((3, ))
+    # verts -= plane_vector
+    # print(plane_vector)
+    plane_scale = 1
+    # plane_scale *= np.max(np.absolute(verts))
+    # # # print(plane_scale)
+    # verts /= plane_scale
+    print(verts.max())
+    print(verts.min())
+    model_name = 'kbr_'+mode+'_heart_' + info_list[0]['sid']
+
+    plane_normals, ds = _get_kbr_planes(info_list, cali_info, plane_scale, plane_vector, mode)
+    print(plane_normals)
+    print(ds)
+    plane_origins = [plane_origin_from_params((*n, d)) for n, d in zip(plane_normals, ds)]
+
+
+    poly_faces = [[3, a, b, c ] for a, b, c in faces]
+    mesh_poly = pv.PolyData(verts, poly_faces)
+    pl = pv.Plotter()
+    pl.add_mesh(mesh_poly, show_edges=True, color= 'red')
+    pl.add_axes(line_width=5, box=True)
+    for normal, origin in zip(plane_normals, plane_origins):
+        pl.add_mesh(pv.Plane(origin, normal, i_size=500, j_size=500))
+    pl.show()
+    
+    ccs_per_plane = [cross_section(verts, faces, plane_orig=o, plane_normal=n) for o, n in tqdm(list(zip(plane_origins, plane_normals)))]
+    
+    csl = _csl_from_mesh(model_name, plane_origins, plane_normals, ds, ccs_per_plane)
+
+    _save_sliced_mesh(csl, faces, model_name, save_path, verts)
+    return csl
 
 def _save_sliced_mesh(csl, faces, model_name, save_path, verts):
 
@@ -52,11 +126,10 @@ def _save_sliced_mesh(csl, faces, model_name, save_path, verts):
         for j in range(3):
             my_mesh.vectors[i][j] = verts[f[j], :]
 
+    print(my_mesh)
     my_mesh.save(os.path.join(save_path, f'{model_name}.stl'))
     csl.to_ply(os.path.join(save_path, f'{model_name}.ply'))
     csl.to_file(os.path.join(save_path, f'{model_name}.csl'))
-
-
 
 def _get_random_planes(n_slices):
     plane_normals = np.random.randn(n_slices, 3)
@@ -64,6 +137,62 @@ def _get_random_planes(n_slices):
     ds = -1 * (np.random.random_sample(n_slices) * 2 - 1)
     return plane_normals, ds
 
+def _get_kbr_planes(info_list, cali_info, plane_scale, plane_vector, mode):
+    # return plane's normals and ds
+
+    trans_matrixs_list = []
+    normal_list = []
+    d_list = []
+
+    # t_matrix = np.zeros((4,4))
+    # t_matrix[[0,1,2,3], [2,1,0,3]] = 1
+    # print(t_matrix)
+
+    i_matrix = np.zeros((4, 3))
+    # print(i_matrix)
+    plane_vector = np.insert(plane_vector, 3, 0)
+    plane_vector = plane_vector.T
+    # print(plane_vector)
+    i_matrix = np.insert(i_matrix, 3, plane_vector, axis=1)
+    # print('i_matrix')
+    # print(i_matrix)
+
+    s_matrix = np.eye(4)
+    s_matrix[:3,:3] = s_matrix[:3,:3] / plane_scale
+
+    for plane in info_list:
+        depth_label = plane['depth_label']
+        enablePatientMovementCorrection = 0
+        patient_sensor_orientation = np.array(plane[mode+'_patient_orientation'])[[3,0,1,2]]
+        patient_initial_orientation = np.array(plane['init_patient_orientation'])[[3,0,1,2]]
+        sensor_orientation = np.array(plane[mode+'_sensor_orientation'])[[3,0,1,2]]
+        patient_sensor_position = np.array(plane[mode+'_patient_location'])
+        patient_initial_position = np.array(plane['init_patient_location'])
+        sensor_posiotion = np.array(plane[mode+'_sensor_location'])
+        c_orien_matrix = np.reshape(cali_info['calibration_rotation_matrix'], (3,3))
+        c_pos_vector = np.array(cali_info['calibration_translation_vector'])
+        for depth in cali_info['depth_list']:
+            if depth['depth_label'] == depth_label:
+                depth_XMillimetersPerPixel = depth['x_millmeter_per_pixel']
+                depth_YMillimetersPerPixel = depth['y_millmeter_per_pixel']
+                depth_OriginPixel_X = depth['origin_x']
+                depth_OriginPixel_Y = depth['origin_y']
+        # print(plane_scale)
+        trans_matrix = make_plane_transform(enablePatientMovementCorrection, patient_sensor_orientation, patient_initial_orientation, sensor_orientation, patient_sensor_position, patient_initial_position, sensor_posiotion, c_orien_matrix, c_pos_vector, depth_XMillimetersPerPixel, depth_YMillimetersPerPixel, depth_OriginPixel_X, depth_OriginPixel_Y)
+        # trans_matrix = np.dot(t_matrix, trans_matrix)
+        trans_matrix -= i_matrix
+        trans_matrix = np.dot(s_matrix, trans_matrix)
+        trans_matrixs_list.append(trans_matrix)
+
+    for matrix in trans_matrixs_list:
+        normal, d = read_kbr_plane(matrix)
+        # d /= plane_scale
+        normal_list.append(normal)
+        d_list.append(d)
+
+    normals = np.array(normal_list)
+    ds = np.array(d_list)
+    return normals, ds
 
 def _plane_from_mesh(ccs, plane_params, normal, origin, plane_id, csl):
     connected_components = []
@@ -146,14 +275,55 @@ def _orient_polyline(verts, is_hole, to_plane_cords):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='slice a mesh')
-    parser.add_argument('input', type=str, help='path to mesh')
-    parser.add_argument('out_dir', type=str, help='out directory to save outputs')
-    parser.add_argument('n_slices', type=int, help='n of slices')
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description='slice a mesh')
+    # parser.add_argument('input', type=str, help='path to mesh')
+    # parser.add_argument('out_dir', type=str, help='out directory to save outputs')
+    
+    # args = parser.parse_args()
 
-    print(f'Slicing {args.input} with {args.n_slices} slices')
-    csl = make_csl_from_mesh(args.input, args.out_dir, args.n_slices)
+    # input_path = '/staff/ydli/projects/OReX/VpStudy_bak.xml'
+    # out_path = '/staff/ydli/projects/OReX/Data/kbr'
+    # print(f'Slicing kbr')
+    # csl_ed = make_csl_from_ed_kbr(input_path, out_path)
+    # csl_es = make_csl_from_es_kbr(input_path, out_path)
 
-    print(f'Generated csl={csl.model_name} non-empty slices={len([p for p in csl.planes if not p.is_empty])}, n edges={len(csl)} '
-          f'Artifacts at: {args.out_dir}')
+    # print(f'Generated csl={csl.model_name} non-empty slices={len([p for p in csl.planes if not p.is_empty])}, n edges={len(csl)} '
+    #       f'Artifacts at: {args.out_dir}')
+
+    # for filepath in os.listdir('/staff/ydli/projects/OReX/Data/xmls'):
+    #     file_path = '/staff/ydli/projects/OReX/Data/xmls/'+filepath
+    #     file_old_name = file_path + '/VpStudy.xml'
+    #     file_name = file_path + '/VpStudy_' + filepath + '.xml'
+    #     os.rename(file_old_name, file_name)
+
+    # new_filepath = '/staff/ydli/projects/OReX/Data/kbr_patient_backup'
+    # for filepath in os.listdir('/staff/ydli/projects/OReX/Data/xmls'):
+    #      file_path = '/staff/ydli/projects/OReX/Data/xmls/'+filepath
+    #      # old_filepath_list.append(filename)
+    #      file_name = '/VpStudy_' + filepath + '.xml'
+    #      # old_filename_list.append(filename)
+    #      shutil.copy(file_path + file_name, new_filepath + file_name)
+    
+    # file_name = 'VpStudy_SID_3042_10280.xml'
+    # input_path = '/staff/ydli/projects/OReX/Data/kbr_patient_backup/' + file_name
+    # out_path = '/staff/ydli/projects/OReX/trash/'
+
+    # ed_mode = 'ed'
+    # csl_ed = make_csl_from_kbr(input_path, out_path, ed_mode)
+    # es_mode = 'es'
+    # csl_es = make_csl_from_kbr(input_path, out_path, es_mode)
+
+    for filename in os.listdir('/staff/ydli/projects/OReX/Data/kbr_patient_backup'):
+        # print(filename)
+        input_path = '/staff/ydli/projects/OReX/Data/kbr_patient_backup/' + filename
+        out_path = '/staff/ydli/projects/OReX/Data/kbr_backup'
+        # print(input_path)
+        # break
+        print(f'Slicing ' + filename)
+        try:
+            ed_mode = 'ed'
+            csl_ed = make_csl_from_kbr(input_path, out_path, ed_mode)
+            es_mode = 'es'
+            csl_es = make_csl_from_kbr(input_path, out_path, es_mode)
+        except:
+            print('slice error')

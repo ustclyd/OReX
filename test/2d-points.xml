@@ -1,0 +1,154 @@
+
+        <AnatomicStructure Name="endo_point_surface" MinPoints="2" Phase="ED">
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan0">
+            <ScreenPosition>
+              <X>682</X>
+              <Y>318</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan3">
+            <ScreenPosition>
+              <X>636</X>
+              <Y>218</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan3">
+            <ScreenPosition>
+              <X>579</X>
+              <Y>371</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan11">
+            <ScreenPosition>
+              <X>590</X>
+              <Y>194</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan15">
+            <ScreenPosition>
+              <X>573</X>
+              <Y>207</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan15">
+            <ScreenPosition>
+              <X>473</X>
+              <Y>310</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan18">
+            <ScreenPosition>
+              <X>444</X>
+              <Y>337</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan4">
+            <ScreenPosition>
+              <X>701</X>
+              <Y>260</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan0">
+            <ScreenPosition>
+              <X>663</X>
+              <Y>224</Y>
+            </ScreenPosition>
+          </Point>
+        </AnatomicStructure>
+        <AnatomicStructure Name="rv_septum" MinPoints="1" Phase="ED">
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan0">
+            <ScreenPosition>
+              <X>581</X>
+              <Y>308</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan4">
+            <ScreenPosition>
+              <X>614</X>
+              <Y>336</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan15">
+            <ScreenPosition>
+              <X>578</X>
+              <Y>290</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan18">
+            <ScreenPosition>
+              <X>589</X>
+              <Y>240</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan18">
+            <ScreenPosition>
+              <X>577</X>
+              <Y>334</Y>
+            </ScreenPosition>
+          </Point>
+        </AnatomicStructure>
+        <AnatomicStructure Name="pulmonic_valve" MinPoints="1" Phase="ED">
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan11">
+            <ScreenPosition>
+              <X>677</X>
+              <Y>361</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan4">
+            <ScreenPosition>
+              <X>685</X>
+              <Y>399</Y>
+            </ScreenPosition>
+          </Point>
+        </AnatomicStructure>
+        <AnatomicStructure Name="Sub_Pulmonary" MinPoints="1" Phase="ED">
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan11">
+            <ScreenPosition>
+              <X>605</X>
+              <Y>320</Y>
+            </ScreenPosition>
+          </Point>
+        </AnatomicStructure>
+        <AnatomicStructure Name="tricuspid_annulus" MinPoints="3" Phase="ED">
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan18">
+            <ScreenPosition>
+              <X>453</X>
+              <Y>448</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan18">
+            <ScreenPosition>
+              <X>574</X>
+              <Y>411</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan3">
+            <ScreenPosition>
+              <X>658</X>
+              <Y>436</Y>
+            </ScreenPosition>
+          </Point>
+        </AnatomicStructure>
+        <AnatomicStructure Name="basal_bulge_rv" MinPoints="0" Phase="ED" />
+        <AnatomicStructure Name="FourC_RX" MinPoints="1" Phase="ED">
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan18">
+            <ScreenPosition>
+              <X>608</X>
+              <Y>183</Y>
+            </ScreenPosition>
+          </Point>
+        </AnatomicStructure>
+        <AnatomicStructure Name="septal_edge" MinPoints="0" Phase="ED">
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan15">
+            <ScreenPosition>
+              <X>504</X>
+              <Y>348</Y>
+            </ScreenPosition>
+          </Point>
+          <Point Phase="ED" m_scanIndex="0" ScanName="Scan15">
+            <ScreenPosition>
+              <X>683</X>
+              <Y>270</Y>
+            </ScreenPosition>
+          </Point>
+        </AnatomicStructure>

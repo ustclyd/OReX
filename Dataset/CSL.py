@@ -160,7 +160,7 @@ class CSL:
         return f"CSLC\n{len(non_empty_planes)} {self.n_labels} \n\n" + ''.join(map(repr, non_empty_planes))
 
     @classmethod
-    def from_csl_file(cls, filename):
+    def from_csl_file(cls, filename): 
         model_name = path.basename(filename).split('.')[0]
         assert path.basename(filename).split('.')[-1].lower() == 'csl'
         with open(filename, 'r') as csl_file:
