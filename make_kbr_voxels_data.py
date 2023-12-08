@@ -14,14 +14,14 @@ from kbr_slice import read_kbr_plane, read_kbr_mesh
 
 
 
-def make_kbr_gt_mesh2voxels(filename):
+def make_kbr_gt_mesh2voxels(filename, mode):
     '''
-    read kbr mesh ground truth from a xml file,
+    read kbr mesh ground truth from a xml file, mode record 'ed', 'es'
     then output a matrix which is the dense matrix voxels of this mesh (N*N*N) filled with True, False
     '''
     
     info_list, cali_info, mesh_text = parseXml(filename)
-    verts, faces = read_kbr_mesh(mesh_text['es'])
+    verts, faces = read_kbr_mesh(mesh_text[mode])
     mesh = Trimesh(verts, faces)
     voxels = creation.local_voxelize(mesh, mesh.centroid, pitch=0.5, radius=256, fill=True)
     # print(voxels)
