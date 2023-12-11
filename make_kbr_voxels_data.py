@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import pandas as pd
 import pickle
 import glob
 
@@ -167,7 +168,7 @@ if __name__ == '__main__':
                 print('SID'+mode+' train Folder already exists')
 
             # make es&ed gt data .txt file
-            dump_filepath = mode_data_path + '/' + sid + '/' + 'gt'+ '/' + 'data.txt'
+            dump_filepath = mode_data_path + '/' + sid + '/' + 'gt'+ '/' + sid+mode+'_gt_data.txt'
             make_gt_pickle_txt_file(dump_filepath, xml_file, mode)
 
 
@@ -177,6 +178,31 @@ if __name__ == '__main__':
             for file in glob.glob(id_file):
                 # print(file)
                 if mode in file:
-                    dump_filepath = mode_data_path + '/' + sid + '/' + 'train'+ '/' + 'data.txt'
+                    dump_filepath = mode_data_path + '/' + sid + '/' + 'train'+ '/' + sid+mode+'_train_data.txt'
                     make_train_pickle_txt_file(dump_filepath, xml_file, mode)
 
+    # make the .csv file
+    sid_list = []
+    train_filelist = []
+    gt_filelist = []
+    for mode in mode_list:
+        mode_data_path = '/staff/ydli/projects/OReX/Data/UNet/' + mode + '_data'
+        for sid in os.listdir(mode_data_path):
+            sid_mode = sid + '_' + mode
+            sid_list.append(sid_mode)
+
+            train_filepath = mode_data_path + '/' + sid + '/' + 'train'+ '/' + sid+mode+'_train_data.txt'
+            train_filelist.append(train_filepath)
+
+            gt_filepath = mode_data_path + '/' + sid + '/' + 'gt'+ '/' + sid+mode+'_gt_data.txt'
+            gt_filelist.append(gt_filepath)
+
+    # print(sid_list)
+    # print(train_filelist)
+    # print(gt_filelist)
+
+    csv_dict = {'data_name':sid_list, 'train_filepath':train_filelist, 'gt_filepath':gt_filelist}
+    df = pd.DataFrame(csv_dict)
+
+    # save dataframe as .csv file
+    df.to_csv('/staff/ydli/projects/OReX/Data/UNet/UNet_data.csv')
