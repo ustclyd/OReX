@@ -33,7 +33,12 @@ def make_kbr_gt_mesh2voxels(filename, mode):
     # print(voxels)
     # voxels.show()
     matrix = voxels.matrix
-    # print(type(matrix))
+    matrix = np.delete(matrix, 0, 0)
+    print(matrix.shape)
+    matrix = np.delete(matrix, 0, 1)
+    matrix = np.delete(matrix, 0, 2)
+
+    # output matrix with shape:(512, 512, 512) filled with True&False
 
     return matrix
 
@@ -74,6 +79,12 @@ def make_kbr_train_mesh2voxels(filename):
     voxels = creation.local_voxelize(convex_hull, convex_hull.centroid, pitch=0.05, radius=256, fill=True)
     # voxels.show()
     matrix = voxels.matrix
+    matrix = np.delete(matrix, 0, 0)
+    print(matrix.shape)
+    matrix = np.delete(matrix, 0, 1)
+    matrix = np.delete(matrix, 0, 2)
+
+    # output matrix with shape:(512, 512, 512) filled with True&False
 
     return matrix
 
@@ -97,6 +108,105 @@ def make_train_pickle_txt_file(dump_filepath, xml_file, mode):
     return
 
 
+def make_txt_file_for_UNet(gt_filepath, train_filepath, mode_list, data_path):
+
+    # create data path
+    if not os.path.exists(data_path):
+        os.makedirs(data_path)
+        print("UNet Folder created")
+    else:
+        print("UNet Folder already exists")
+    
+    # create es&ed data path
+    for mode in mode_list:
+        mode_data_path = data_path + '/' + mode + '_data'
+        if not os.path.exists(mode_data_path):
+            os.makedirs(mode_data_path)
+            print('UNet '+mode+ '_data Folder created')
+        else:
+            print('UNet '+mode+ '_data Folder already exists')
+
+
+    for filename in os.listdir(gt_filepath):
+
+        xml_file = gt_filepath+'/'+filename
+
+        # filename is like 'VpStudy_SID_3042_10280.xml'
+        sid = filename.split('_')[-1].split('.')[0]
+        print(sid) # sid = '10280'
+        sid = 'SID' + '_' + filename.split('_')[-2] + '_' + sid   
+        print(sid) # sid = 'SID_3042_10280'
+
+        for mode in mode_list: # mode 'es'&'ed'
+            mode_data_path = data_path + '/' + mode + '_data'
+            sid_data_path = mode_data_path + '/' + sid
+            if not os.path.exists(sid_data_path):
+                os.makedirs(sid_data_path)
+                print('SID '+mode+' Folder created')
+            else:
+                print('SID '+mode+' Folder already exists')
+
+            sid_gt_data_path = mode_data_path + '/' + sid + '/' + 'gt'
+            if not os.path.exists(sid_gt_data_path):
+                os.makedirs(sid_gt_data_path)
+                print('SID '+mode+' gt Folder created')
+            else:
+                print('SID '+mode+' gt Folder already exists')
+
+            sid_train_data_path = mode_data_path + '/' + sid + '/' + 'train'
+            if not os.path.exists(sid_train_data_path):
+                os.makedirs(sid_train_data_path)
+                print('SID '+mode+' train Folder created')
+            else:
+                print('SID '+mode+' train Folder already exists')
+
+            # make es&ed gt data .txt file
+            dump_filepath = mode_data_path + '/' + sid + '/' + 'gt'+ '/' + sid+'_'+mode+'_gt_data.txt'
+            make_gt_pickle_txt_file(dump_filepath, xml_file, mode)
+
+
+            id_file = train_filepath + '*'+sid + '*.ply'
+            # len_file=len(glob.glob(id_file))
+            # print(len_file)
+            for file in glob.glob(id_file):
+                # print(file)
+                if mode in file:
+                    dump_filepath = mode_data_path + '/' + sid + '/' + 'train'+ '/' + sid+'_'+mode+'_train_data.txt'
+                    make_train_pickle_txt_file(dump_filepath, xml_file, mode)
+    
+    return
+
+
+
+def make_csv_file_for_UNet(mode_list, data_path):
+
+    # make the .csv file
+    sid_list = []
+    train_filelist = []
+    gt_filelist = []
+    for mode in mode_list:
+        mode_data_path = data_path + '/' + mode + '_data'
+        for sid in os.listdir(mode_data_path):
+            sid_mode = sid + '_' + mode
+            sid_list.append(sid_mode)
+
+            train_filepath = mode_data_path + '/' + sid + '/' + 'train'+ '/' + sid+'_'+mode+'_train_data.txt'
+            train_filelist.append(train_filepath)
+
+            gt_filepath = mode_data_path + '/' + sid + '/' + 'gt'+ '/' + sid+'_'+mode+'_gt_data.txt'
+            gt_filelist.append(gt_filepath)
+
+    # print(sid_list)
+    # print(train_filelist)
+    # print(gt_filelist)
+
+    csv_dict = {'data_name':sid_list, 'train_filepath':train_filelist, 'gt_filepath':gt_filelist}
+    df = pd.DataFrame(csv_dict)
+
+    # save dataframe as .csv file
+    df.to_csv('/staff/ydli/projects/OReX/Data/UNet/UNet_data.csv')
+
+
 
 if __name__ == '__main__':
     
@@ -118,91 +228,10 @@ if __name__ == '__main__':
 
     # create UNet data path
     data_path = '/staff/ydli/projects/OReX/Data/UNet'
-    if not os.path.exists(data_path):
-        os.makedirs(data_path)
-        print("UNet Folder created")
-    else:
-        print("UNet Folder already exists")
-    
-    # create es&ed data path
-    for mode in mode_list:
-        mode_data_path = '/staff/ydli/projects/OReX/Data/UNet/' + mode + '_data'
-        if not os.path.exists(mdoe_data_path):
-            os.makedirs(mode_data_path)
-            print('UNet'+mode+ '_data Folder created')
-        else:
-            print('UNet'+mode+ '_data Folder already exists')
 
+    # make the .txt file
+    make_txt_file_for_UNet(gt_filepath, train_filepath, mode_list, data_path)
 
-    for filename in os.listdir(gt_filepath):
-
-        xml_file = gt_filepath+'/'+filename
-
-        # filename is like 'VpStudy_SID_3042_10280.xml'
-        sid = filename.split('_')[-1].split('.')[0]
-        print(sid) # sid = '10280'
-        sid = 'SID' + '_' + filename.split('_')[-2] + '_' + sid   
-        print(sid) # sid = 'SID_3042_10280'
-
-        for mode in mode_list: # mode 'es'&'ed'
-            mode_data_path = '/staff/ydli/projects/OReX/Data/UNet/' + mode + '_data'
-            sid_data_path = mode_data_path + '/' + sid
-            if not os.path.exists(sid_data_path):
-                os.makedirs(sid_data_path)
-                print('SID'+mode+' Folder created')
-            else:
-                print('SID'+mode+' Folder already exists')
-
-            sid_gt_data_path = mode_data_path + '/' + sid + '/' + 'gt'
-            if not os.path.exists(sid_gt_data_path):
-                os.makedirs(sid_gt_data_path)
-                print('SID'+mode+' gt Folder created')
-            else:
-                print('SID'+mode+' gt Folder already exists')
-
-            sid_train_data_path = mode_data_path + '/' + sid + '/' + 'train'
-            if not os.path.exists(sid_train_data_path):
-                os.makedirs(sid_train_data_path)
-                print('SID'+mode+' train Folder created')
-            else:
-                print('SID'+mode+' train Folder already exists')
-
-            # make es&ed gt data .txt file
-            dump_filepath = mode_data_path + '/' + sid + '/' + 'gt'+ '/' + sid+mode+'_gt_data.txt'
-            make_gt_pickle_txt_file(dump_filepath, xml_file, mode)
-
-
-            id_file = train_filepath + '*'+sid + '*.ply'
-            # len_file=len(glob.glob(id_file))
-            # print(len_file)
-            for file in glob.glob(id_file):
-                # print(file)
-                if mode in file:
-                    dump_filepath = mode_data_path + '/' + sid + '/' + 'train'+ '/' + sid+mode+'_train_data.txt'
-                    make_train_pickle_txt_file(dump_filepath, xml_file, mode)
 
     # make the .csv file
-    sid_list = []
-    train_filelist = []
-    gt_filelist = []
-    for mode in mode_list:
-        mode_data_path = '/staff/ydli/projects/OReX/Data/UNet/' + mode + '_data'
-        for sid in os.listdir(mode_data_path):
-            sid_mode = sid + '_' + mode
-            sid_list.append(sid_mode)
-
-            train_filepath = mode_data_path + '/' + sid + '/' + 'train'+ '/' + sid+mode+'_train_data.txt'
-            train_filelist.append(train_filepath)
-
-            gt_filepath = mode_data_path + '/' + sid + '/' + 'gt'+ '/' + sid+mode+'_gt_data.txt'
-            gt_filelist.append(gt_filepath)
-
-    # print(sid_list)
-    # print(train_filelist)
-    # print(gt_filelist)
-
-    csv_dict = {'data_name':sid_list, 'train_filepath':train_filelist, 'gt_filepath':gt_filelist}
-    df = pd.DataFrame(csv_dict)
-
-    # save dataframe as .csv file
-    df.to_csv('/staff/ydli/projects/OReX/Data/UNet/UNet_data.csv')
+    make_csv_file_for_UNet(mode_list, data_path)
