@@ -3,6 +3,7 @@ import pyvista as pv
 import open3d as o3d
 from xml_reader import parseXml
 from trimesh import Trimesh
+from trimesh.sample import sample_surface
 from Dataset.CSL import CSL
 
 from scipy.spatial import ConvexHull
@@ -66,38 +67,51 @@ if __name__ == '__main__':
     plotter.show()
     
     '''
-    # filename = '/staff/ydli/projects/OReX/trash/kbr_ed_heart_SID_3042_10280.ply' # '/staff/ydli/projects/OReX/Data/kbr_patient_backup/VpStudy_SID_3042_10280.xml' # '/staff/ydli/projects/OReX/VpStudy_bak.xml'
+    filename =  '/staff/ydli/projects/OReX/Data/kbr_patient_backup/VpStudy_SID_3042_10280.xml' # '/staff/ydli/projects/OReX/trash/kbr_ed_heart_SID_3042_10280.ply' # '/staff/ydli/projects/OReX/VpStudy_bak.xml'
 
     # reader = pv.get_reader(filename)
     # mesh = reader.read()
 
-    # info_list, cali_info, mesh_text = parseXml(filename)
-    # verts, faces = read_kbr_mesh(mesh_text['es'])
+    info_list, cali_info, mesh_text = parseXml(filename)
+    verts, faces = read_kbr_mesh(mesh_text['es'])
+    # pcd = o3d.io.read_point_cloud(filename)
     # verts -= np.mean(verts, axis=0)
     # scale = 1.1
     # verts /= scale * np.max(np.absolute(verts))
     # verts += 1
     # reader = pv.get_reader(filename)
 
-    obj_name = '/staff/ydli/projects/OReX/mesh_last_300.obj'
+    # obj_name = '/staff/ydli/projects/OReX/mesh_last_300.obj'
     # reader_obj = pv.get_reader(obj_name)
-    mesh = o3d.io.read_triangle_mesh(obj_name)# reader_obj.read()
+    # mesh = o3d.io.read_triangle_mesh(obj_name)# reader_obj.read()
     # mesh = Trimesh(verts, faces) # reader.read() # 
     # print(mesh)
-    mesh.scale(1 / np.max(mesh.get_max_bound() - mesh.get_min_bound()),
-           center=mesh.get_center())
-    o3d.visualization.draw_geometries([mesh])
-    voxel_grid = o3d.geometry.VoxelGrid.create_from_triangle_mesh(mesh,
-                                                              voxel_size=0.005)
-    print(voxel_grid)
-    voxels = voxel_grid.get_voxels()
-    indices = np.stack(list(vx.grid_index for vx in voxels))
-    o3d.visualization.draw_geometries([voxel_grid])
-    # pl = pv.Plotter()
+    # mesh.scale(1 / np.max(mesh.get_max_bound() - mesh.get_min_bound()),
+    #        center=mesh.get_center())
+    # o3d.visualization.draw_geometries([mesh])
+    # voxel_grid = o3d.geometry.VoxelGrid.create_from_triangle_mesh(mesh,
+    #                                                           voxel_size=0.005)
+    # print(voxel_grid)
+    # voxels = voxel_grid.get_voxels()
+    # indices = np.stack(list(vx.grid_index for vx in voxels))
+    # o3d.visualization.draw_geometries([voxel_grid])
+    # # pl = pv.Plotter()
     # pl.add_mesh(mesh, show_edges=True, color= 'red')
     # pl.add_mesh(mesh_obj, show_edges=True, color= 'red', style='wireframe')
     # pl.show()
 
     # hull = ConvexHull(verts * (1 + 0.05))
+    # mesh = Trimesh(hull.points, hull.simplices)
+    # verts = sample_surface(Trimesh(hull.points, hull.simplices), 2 ** 14)
+    pv.plot(
+    verts,
+    scalars=verts[:, 2],
+    render_points_as_spheres=True,
+    point_size=20,
+    show_scalar_bar=False,
+)
+    # pl = pv.Plotter()
+    # pl.add_mesh(mesh, show_edges=True, color= 'white')
+    # pl.show()
     # boundary_xyzs = np.array(sample_surface(Trimesh(hull.points, hull.simplices), args.n_samples_boundary)[0])
     # return boundary_xyzs
