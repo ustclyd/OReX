@@ -17,6 +17,11 @@ from Dataset.CSL import CSL
 
 from scipy.spatial import ConvexHull
 
+from skimage import measure
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from mpl_toolkits.mplot3d import Axes3D
+
 from kbr_mesh import KBRMesh
 from kbr_slice import read_kbr_plane, read_kbr_mesh
 
@@ -98,6 +103,206 @@ def make_kbr_train_mesh2voxels(filename):
 
 
 
+def make_kbr_label_mesh2voxels(filename, mode):
+    '''
+    read kbr mesh ground truth from a xml file, mode record 'ed', 'es'
+    then output a matrix which is the dense matrix voxels of this mesh (N*N*N) filled with True, False
+    '''
+    
+    info_list, cali_info, mesh_text = parseXml(filename)
+
+    verts, faces = read_kbr_mesh(mesh_text[mode])
+    # print(verts[0])
+    # print(verts.max())
+    # print(verts.min())
+
+    vector = np.mean(verts, axis=0)
+    verts -= vector
+    scale = 1.1 * np.max(np.absolute(verts))
+    verts /= scale
+
+    mesh = Trimesh(verts, faces)
+    origin = np.zeros((3,))
+    voxels = creation.local_voxelize(mesh, origin, pitch=0.016, radius=64, fill=True)
+    # voxels = creation.local_voxelize(mesh, origin, pitch=0.008, radius=128, fill=True)
+    # print(voxels)
+    # voxels.show()
+    matrix = voxels.matrix
+    matrix = np.delete(matrix, 0, 0)
+    matrix = np.delete(matrix, 0, 1)
+    matrix = np.delete(matrix, 0, 2)
+    print(matrix.shape)
+
+    # output matrix with shape:(512, 512, 512) filled with True&False
+
+    return matrix, scale, vector
+
+def make_kbr_image_mesh2voxels(filename, scale, vector):
+    '''
+    read kbr plane mesh(train data) from ply,
+    create a convex mesh for this mesh,
+    then output a np.array (N, 3) which represents the voxels of this mesh
+    '''
+
+    # Load the .ply file
+    mesh = trimesh.load_mesh(filename)
+
+    mesh.show()
+    # # Create the convex hull
+    # convex_hull = mesh.convex_hull
+    # # print(np.mean(np.asarray(convex_hull.vertices), axis=0))
+    # # print(np.asarray(convex_hull.vertices).max())
+    # # print(np.asarray(convex_hull.vertices).min())
+    # moved_mesh = convex_hull.apply_translation(-vector)
+    # # print(np.mean(np.asarray(moved_mesh.vertices), axis=0))
+    # # print(np.asarray(moved_mesh.vertices).max())
+    # # print(np.asarray(moved_mesh.vertices).min())
+    # scaled_mesh = moved_mesh.apply_scale(1/scale)
+    # # print(np.mean(np.asarray(scaled_mesh.vertices), axis=0))
+    # # print(np.asarray(scaled_mesh.vertices).max())
+    # # print(np.asarray(scaled_mesh.vertices).min())
+    # # print(type(convex_hull))
+
+    # Create the mesh
+    # print(np.mean(np.asarray(convex_hull.vertices), axis=0))
+    # print(np.asarray(convex_hull.vertices).max())
+    # print(np.asarray(convex_hull.vertices).min())
+    moved_mesh = mesh.apply_translation(-vector)
+    # print(np.mean(np.asarray(moved_mesh.vertices), axis=0))
+    # print(np.asarray(moved_mesh.vertices).max())
+    # print(np.asarray(moved_mesh.vertices).min())
+    scaled_mesh = moved_mesh.apply_scale(1/scale)
+    # print(np.mean(np.asarray(scaled_mesh.vertices), axis=0))
+    # print(np.asarray(scaled_mesh.vertices).max())
+    # print(np.asarray(scaled_mesh.vertices).min())
+    # print(type(convex_hull))
+
+    origin = np.zeros((3,))
+    voxels = creation.local_voxelize(scaled_mesh, origin, pitch=0.016, radius=64, fill=True)
+    # voxels = creation.local_voxelize(scaled_mesh, origin, pitch=0.008, radius=128, fill=True)
+    matrix = voxels.matrix
+    matrix = np.delete(matrix, 0, 0)
+    matrix = np.delete(matrix, 0, 1)
+    matrix = np.delete(matrix, 0, 2)
+    print(matrix.shape)
+
+    # output matrix with shape:(512, 512, 512) filled with True&False
+
+    return matrix
+
+def make_kbr_profile_image_mesh2voxels(filename, scale, vector):
+    '''
+    read kbr plane mesh(train data) from ply,
+    create a convex mesh for this mesh,
+    then output a np.array (N, 3) which represents the voxels of this mesh
+    '''
+
+    # Load the .ply file
+    mesh = trimesh.load_mesh(filename)
+
+    # mesh.show()
+    # # Create the convex hull
+    # convex_hull = mesh.convex_hull
+    # # print(np.mean(np.asarray(convex_hull.vertices), axis=0))
+    # # print(np.asarray(convex_hull.vertices).max())
+    # # print(np.asarray(convex_hull.vertices).min())
+    # moved_mesh = convex_hull.apply_translation(-vector)
+    # # print(np.mean(np.asarray(moved_mesh.vertices), axis=0))
+    # # print(np.asarray(moved_mesh.vertices).max())
+    # # print(np.asarray(moved_mesh.vertices).min())
+    # scaled_mesh = moved_mesh.apply_scale(1/scale)
+    # # print(np.mean(np.asarray(scaled_mesh.vertices), axis=0))
+    # # print(np.asarray(scaled_mesh.vertices).max())
+    # # print(np.asarray(scaled_mesh.vertices).min())
+    # # print(type(convex_hull))
+
+    # Create the mesh
+    # print(np.mean(np.asarray(convex_hull.vertices), axis=0))
+    # print(np.asarray(convex_hull.vertices).max())
+    # print(np.asarray(convex_hull.vertices).min())
+    moved_mesh = mesh.apply_translation(-vector)
+    # print(np.mean(np.asarray(moved_mesh.vertices), axis=0))
+    # print(np.asarray(moved_mesh.vertices).max())
+    # print(np.asarray(moved_mesh.vertices).min())
+    scaled_mesh = moved_mesh.apply_scale(1/scale)
+    # print(np.mean(np.asarray(scaled_mesh.vertices), axis=0))
+    # print(np.asarray(scaled_mesh.vertices).max())
+    # print(np.asarray(scaled_mesh.vertices).min())
+    # print(type(convex_hull))
+    convex_hull = scaled_mesh.convex_hull
+
+    origin = np.zeros((3,))
+    voxels = creation.local_voxelize(convex_hull, origin, pitch=0.016, radius=64, fill=True)
+    # voxels = creation.local_voxelize(scaled_mesh, origin, pitch=0.008, radius=128, fill=True)
+    matrix = voxels.matrix
+    matrix = np.delete(matrix, 0, 0)
+    matrix = np.delete(matrix, 0, 1)
+    matrix = np.delete(matrix, 0, 2)
+    # print(matrix.shape)
+
+
+    shape = (129, 129, 129)
+    voxel_array = np.zeros(shape)
+    pitch = 0.016
+
+    for point in scaled_mesh.vertices:
+        x, y, z = point
+
+        voxel_x = int((x / pitch) + (shape[0] - 1) / 2)
+        voxel_y = int((y / pitch) + (shape[1] - 1) / 2)
+        voxel_z = int((z / pitch) + (shape[2] - 1) / 2)
+        if 0 <= voxel_x < shape[0] and 0 <= voxel_y < shape[1] and 0 <= voxel_z < shape[2]:
+            voxel_array[voxel_x, voxel_y, voxel_z] = 1
+            # print(voxel_x, voxel_y, voxel_z)
+
+    voxel_array = np.delete(voxel_array, 0, 0)
+    voxel_array = np.delete(voxel_array, 0, 1)
+    voxel_array = np.delete(voxel_array, 0, 2)
+    # print(voxel_array.shape)
+    count_true = np.sum(voxel_array)
+    print('count_true:', count_true)
+    output_matrix = np.stack([matrix, voxel_array])
+    # output matrix with shape:(512, 512, 512) filled with True&False
+    # print(output_matrix.shape)
+
+    return output_matrix
+
+def make_points_voxels(points, scale, vector):
+
+    mesh = trimesh.Trimesh(vertices=points)
+    # print(mesh.vertices.shape)
+    # print(mesh.vertices[0])
+    # print(mesh.vertices.max())
+    # print(mesh.vertices.min())
+    # print(mesh)
+    convex_hull = mesh.convex_hull
+    # print(np.mean(np.asarray(convex_hull.vertices), axis=0))
+    # print(np.asarray(convex_hull.vertices).max())
+    # print(np.asarray(convex_hull.vertices).min())
+    moved_mesh = convex_hull.apply_translation(-vector)
+    # print(np.mean(np.asarray(moved_mesh.vertices), axis=0))
+    # print(np.asarray(moved_mesh.vertices).max())
+    # print(np.asarray(moved_mesh.vertices).min())
+    scaled_mesh = moved_mesh.apply_scale(1/scale)
+    # print(np.mean(np.asarray(scaled_mesh.vertices), axis=0))
+    # print(np.asarray(scaled_mesh.vertices).max())
+    # print(np.asarray(scaled_mesh.vertices).min())
+    # print(type(scaled_mesh))
+    # print(scaled_mesh.vertices[0])
+
+    origin = np.zeros((3,))
+    voxels = creation.local_voxelize(scaled_mesh, origin, pitch=0.016, radius=64, fill=True)
+    # print(voxels)
+    matrix = voxels.matrix
+    matrix = np.delete(matrix, 0, 0)
+    matrix = np.delete(matrix, 0, 1)
+    matrix = np.delete(matrix, 0, 2)
+
+    # print(matrix.shape)
+
+    # output matrix with shape:(512, 512, 512) filled with True&False
+
+    return matrix
 
 def make_gt_pickle_txt_file(dump_filepath, xml_file, mode):
 
@@ -251,8 +456,8 @@ def read_pickle_saveas_hdf5(mode_list, data_path):
 
     # make the .csv file
     # sid_list = []
-    # train_filelist = []
-    # gt_filelist = []
+    # train_matrixlist = []
+    # gt_matrixlist = []
     # split_list = []
     # ratio = 0.25
     unet_path = '/staff/ydli/projects/OReX/Data/UNet/hdf5'
@@ -312,18 +517,208 @@ def read_pickle_saveas_hdf5(mode_list, data_path):
     # print(len(sid_list))
 
 
+def make_hdf5_for_UNet(gt_filepath, train_filepath, mode_list):
+
+    sid_list = []
+    train_matrixlist = []
+    gt_matrixlist = []
+    scale_list = []
+
+    # print(os.listdir(gt_filepath))
+    for filename in os.listdir(gt_filepath):
+        
+        xml_file = gt_filepath+'/'+filename
+        # print(filename)
+        # filename is like 'VpStudy_SID_3042_10280.xml'
+        sid = filename.split('_')[-1].split('.')[0]
+        # print(sid) # sid = '10280'
+        sid = 'SID' + '_' + filename.split('_')[-2] + '_' + sid   
+        # print(sid) # sid = 'SID_3042_10280'
+
+        for mode in mode_list: # mode 'es'&'ed'
+            # make es&ed gt data .txt file
+            sid_mode = sid + '_' + mode
+            try:
+                gt_matrix, scale, vector = make_kbr_label_mesh2voxels(xml_file, mode)
+                print(sid_mode+' gt matrix created')
+
+            except:
+                print(' error: '+sid_mode+' gt matrix not created')
+                print(sid_mode+' data created failed')
+
+            else:
+                try:
+                    id_file = train_filepath +'/*' +sid+'.ply'
+                    # len_file=len(glob.glob(id_file))
+                    # print(len_file)
+                    for file in glob.glob(id_file):
+                        if mode in file:
+                            ply_file = file
+                            train_matrix = make_kbr_profile_image_mesh2voxels(ply_file, scale, vector)
+                            print(sid_mode+' train matrix file created')
+                except:
+                    print(' error: '+sid_mode+' train matrix not created')
+                    print(sid_mode+' data created failed')
+                else:
+                    sid_list.append(sid_mode)
+                    scale_list.append(scale)
+                    train_matrixlist.append(train_matrix)
+                    gt_matrixlist.append(gt_matrix)
+                    print(sid_mode+' data created successfully')
+     
+    unet_path = '/staff/ydli/projects/OReX/Data/UNet/hdf5_profile_mesh_128_backup'
+    if not os.path.exists(unet_path):
+        os.makedirs(unet_path)
+
+    for sid, image, label, scale in zip(sid_list, train_matrixlist, gt_matrixlist, scale_list):
+
+        hdf5_path = unet_path+'/'+sid+'.hdf5'
+        hdf5_file = h5py.File(hdf5_path, 'w')
+        hdf5_file.create_dataset('image', data=image.astype(np.int16))
+        hdf5_file.create_dataset('label', data=label.astype(np.uint8))
+        hdf5_file.create_dataset('scale', data=scale.astype(np.float32))
+        hdf5_file.close()
+        print('create '+sid+' hdf5 file success!')
+ 
+    # print(sid_list[0])
+    # print(len(sid_list))
+
+def make_points_hdf5_for_UNet(gt_filepath, csv_filepath, mode_list):
+
+    sid_list = []
+    sample_list = []
+    p_list = []
+    p_labels_list = []
+    train_matrixlist = []
+    gt_matrixlist = []
+    scale_list = []
+    vector_list = []
+
+    data_df = pd.read_csv(csv_filepath)
+    info_list = data_df.to_dict('records')
+
+    for info_dict in info_list:
+
+        with open(info_dict['data_path'], 'rb') as f:
+            sample = pickle.load(f) # sample['pc_points'], sample['pc_labels']
+            sample_list.append(sample)
+
+    # print(sample_sid_list[0])
+    # print(len(sample_sid_list))
+    # print(sample_phase_list[0])
+    # print(len(sample_phase_list))
+    # print(sample_list[0])
+    # print(len(sample_list))
+
+    # print(os.listdir(gt_filepath))
+    for filename in os.listdir(gt_filepath):
+        
+        xml_file = gt_filepath+'/'+filename
+        # print(filename)
+        # filename is like 'VpStudy_SID_3042_10280.xml'
+        sid = filename.split('_')[-1].split('.')[0]
+        # print(sid) # sid = '10280'
+        sid = 'SID' + '_' + filename.split('_')[-2] + '_' + sid   
+        # print(sid) # sid = 'SID_3042_10280'
+
+        for mode in mode_list: # mode 'es'&'ed'
+            # make es&ed gt data .txt file
+            sid_mode = sid + '_' + mode
+            try:
+
+                gt_matrix, scale, vector = make_kbr_label_mesh2voxels(xml_file, mode)
+                print(sid_mode+' gt matrix created')
+
+            except:
+
+                print(' error: '+sid_mode+' gt matrix not created')
+                print(sid_mode+' data created failed')
+
+            else:
+
+                try:
+                    for sample in sample_list:
+                        sid_phase = sample['sid'] + '_'+sample['phase']
+                        # print(sid_phase)
+                        if sid_phase == sid_mode:
+                            points, p_labels = sample['pc_points'], sample['pc_labels']
+                            train_matrix = make_points_voxels(points, scale, vector)
+                            print(sid_mode+' train matrix created')
+
+                except:
+                    print(' error: '+sid_mode+' train matrix not created')
+                    print(sid_mode+' data created failed')
+                else:
+                    sid_list.append(sid_mode)
+                    train_matrixlist.append(train_matrix)
+                    gt_matrixlist.append(gt_matrix)
+                    p_list.append(points)
+                    p_labels_list.append(p_labels)
+                    vector_list.append(vector)
+                    scale_list.append(scale)
+                    print(sid_mode+' data created successfully')
+
+     
+    unet_path = '/staff/ydli/projects/OReX/Data/UNet/hdf5_points_128_backup'
+    if not os.path.exists(unet_path):
+        os.makedirs(unet_path)
+
+    for sid, image, label, points, p_label, vector, scale in zip(sid_list, train_matrixlist, gt_matrixlist, p_list, p_labels_list, vector_list, scale_list):
+
+        hdf5_path = unet_path+'/'+sid+'.hdf5'
+        hdf5_file = h5py.File(hdf5_path, 'w')
+        hdf5_file.create_dataset('image', data=image.astype(np.int16))
+        hdf5_file.create_dataset('label', data=label.astype(np.uint8))
+        hdf5_file.create_dataset('points', data=points.astype(np.uint8))
+        hdf5_file.create_dataset('p_label', data=p_label.astype(np.uint8))
+        hdf5_file.create_dataset('vector', data=vector.astype(np.uint8))
+        hdf5_file.create_dataset('scale', data=scale.astype(np.uint8))
+        hdf5_file.close()
+        print('create '+sid+' hdf5 file success!')
+ 
+    # print(sid_list[0])
+    # print(len(sid_list))
+
+
 
 if __name__ == '__main__':
     
     # ## Test count the number of voxels in our voxel data
 
-    # filename = '/staff/ydli/projects/OReX/Data/kbr_patient_backup/VpStudy_SID_3042_10280.xml' # '/staff/ydli/projects/OReX/trash/kbr_ed_heart_SID_3042_10280.ply' # '/staff/ydli/projects/OReX/Data/kbr_patient_backup/VpStudy_SID_3042_10280.xml'
+    # gt_filename = '/staff/ydli/projects/OReX/Data/kbr_patient_backup/VpStudy_SID_3039_16440.xml' # 
+    # train_filename = '/staff/ydli/projects/OReX/Data/kbr_without_ref_backup/kbr_ed_heart_SID_3039_16440.ply' # '/staff/ydli/projects/OReX/Data/kbr_patient_backup/VpStudy_SID_3042_10280.xml'
     
     
-    # matrix = make_kbr_gt_mesh2voxels(filename, 'es')
-    # print(matrix.shape)
-    # count_true = np.sum(matrix) / 134217728
+    # gt_voxel, scale, vector = make_kbr_label_mesh2voxels(gt_filename, 'es')
+    # print(gt_voxel.shape)
+    # count_true = np.sum(gt_voxel) / 134217728
     # print(count_true)
+    # train_voxel = make_kbr_image_mesh2voxels(train_filename, scale, vector)
+    # print(train_voxel.shape)
+    # count_true = np.sum(gt_voxel) / 134217728
+    # print(count_true)
+    # print(scale)
+    # print(vector)
+
+    # gt_verts, gt_faces, _, _ = measure.marching_cubes(gt_voxel, level=0)
+    # train_verts, train_faces, _, _ = measure.marching_cubes(train_voxel, level=0)
+
+    # fig = plt.figure(figsize=(10, 7))
+
+    # ax = fig.add_subplot(121, projection='3d')
+    # ax.scatter(train_verts[:, 0], train_verts[:, 1], train_verts[:, 2], color="blue", s=10)
+    # ax.plot_trisurf(train_verts[:, 0], train_verts[:, 1], train_faces, train_verts[:, 2], cmap='Spectral', lw=1)
+
+    # ax = fig.add_subplot(122, projection='3d')
+    # ax.scatter(gt_verts[:, 0], gt_verts[:, 1], gt_verts[:, 2], color="blue", s=10)
+    # ax.plot_trisurf(gt_verts[:, 0], gt_verts[:, 1], gt_faces, gt_verts[:, 2], cmap='Spectral', lw=1)
+
+    # ax.set_xlabel("X-axis")
+    # ax.set_ylabel("Y-axis")
+    # ax.set_zlabel("Z-axis")
+
+    # plt.show()
+    # # plt.savefig('/staff/ydli/projects/OReX/Data/UNet/png/figure.png')
 
     # ## Test glob
 
@@ -342,17 +737,137 @@ if __name__ == '__main__':
     ## Run this line to make the .csv file which record the .txt file(voxel file)'s path
 
     gt_filepath = '/staff/ydli/projects/OReX/Data/kbr_patient_backup'
-    train_filepath = '/staff/ydli/projects/OReX/Data/kbr_backup'
+    train_filepath = '/staff/ydli/projects/OReX/Data/kbr_without_ref_backup'
     mode_list = ['es', 'ed']
 
-    # create UNet data path
-    data_path = '/staff/ydli/projects/OReX/Data/UNet'
+    csv_filepath = '/staff/wangzhaohui/codes/flownet3d_pytorch/instance/kbr_mesh_pc/info_list.csv'
+
+    # # # ## Test failed file
+
+    # for filename in os.listdir(gt_filepath):
+        
+    #     xml_file = gt_filepath+'/'+filename
+    #     # print(filename)
+    #     # filename is like 'VpStudy_SID_3042_10280.xml'
+    #     sid = filename.split('_')[-1].split('.')[0]
+    #     # print(sid) # sid = '10280'
+    #     sid = 'SID' + '_' + filename.split('_')[-2] + '_' + sid   
+    #     # print(sid) # sid = 'SID_3042_10280'
+
+    #     for mode in mode_list: # mode 'es'&'ed'
+    #         # make es&ed gt data .txt file
+    #         sid_mode = sid + '_' + mode
+            
+    #         gt_matrix, scale, vector = make_kbr_label_mesh2voxels(xml_file, mode)
+    #         print(sid_mode+' gt matrix created')
+
+    #         id_file = train_filepath +'/*' +sid+'.ply'
+    #         # len_file=len(glob.glob(id_file))
+    #         # print(len_file)
+    #         for file in glob.glob(id_file):
+    #             if mode in file:
+    #                 ply_file = file
+    #                 train_matrix = make_kbr_profile_image_mesh2voxels(ply_file, scale, vector)
+    #                 print(sid_mode+' train matrix file created')
+
+    #     unet_path = '/staff/ydli/projects/OReX/Data/UNet/hdf5_profile_mesh_128_backup'
+    #     if not os.path.exists(unet_path):
+    #         os.makedirs(unet_path)
+
+
+    #     hdf5_path = unet_path+'/'+sid+'.hdf5'
+    #     hdf5_file = h5py.File(hdf5_path, 'w')
+    #     hdf5_file.create_dataset('image', data=train_matrix.astype(np.int16))
+    #     hdf5_file.create_dataset('label', data=gt_matrix.astype(np.uint8))
+    #     hdf5_file.create_dataset('scale', data=scale.astype(np.float32))
+    #     hdf5_file.close()
+    #     print('create '+sid+' hdf5 file success!')
+
+    #     break
 
     # # make the .txt file
     # make_txt_file_for_UNet(gt_filepath, train_filepath, mode_list, data_path)
 
 
-    # make the .csv file
-    # print(len(os.listdir(gt_filepath)))
-    # print(os.listdir(gt_filepath))
-    read_pickle_saveas_hdf5(mode_list, data_path)
+    # # make the .csv file
+    # # print(len(os.listdir(gt_filepath)))
+    # # print(os.listdir(gt_filepath))
+    # read_pickle_saveas_hdf5(mode_list, data_path)
+
+
+    # # make .hdf5 file for UNet from .ply&.xml(without ref)
+    make_hdf5_for_UNet(gt_filepath, train_filepath, mode_list)
+
+    # make .hdf5 file for UNet from .ply&.xml(without ref)
+    # make_points_hdf5_for_UNet(gt_filepath, csv_filepath, mode_list)
+
+
+
+    # #  Test
+
+    # sid_list = []
+    # sample_list = []
+    # sample_sid_list = []
+    # sample_phase_list = []
+    # p_list = []
+    # p_labels_list = []
+    # train_matrixlist = []
+    # gt_matrixlist = []
+    # scale_list = []
+    # vector_list = []
+
+    # data_df = pd.read_csv(csv_filepath)
+    # info_list = data_df.to_dict('records')
+
+    # for info_dict in info_list:
+
+    #     with open(info_dict['data_path'], 'rb') as f:
+    #         sample = pickle.load(f) # sample['pc_points'], sample['pc_labels']
+    #         sample_list.append(sample)
+    #     sample_sid_list.append(info_dict['sid'])
+    #     sample_phase_list.append(info_dict['phase'])
+
+    # # print(len(sample_sid_list))
+    # # print(len(sample_phase_list))
+    # # print(len(sample_list))
+    # # print(sample_phase_list[0], sample_phase_list[1])
+
+    # for filename in os.listdir(gt_filepath):
+        
+    #     xml_file = gt_filepath+'/'+filename
+    #     # print(filename)
+    #     # filename is like 'VpStudy_SID_3042_10280.xml'
+    #     sid = filename.split('_')[-1].split('.')[0]
+    #     # print(sid) # sid = '10280'
+    #     sid = 'SID' + '_' + filename.split('_')[-2] + '_' + sid   
+    #     # print(sid) # sid = 'SID_3042_10280'
+
+    #     for mode in mode_list: # mode 'es'&'ed'
+    #         # make es&ed gt data .txt file
+    #         sid_mode = sid + '_' + mode
+
+    #         gt_matrix, scale, vector = make_kbr_label_mesh2voxels(xml_file, mode)
+    #         print(sid_mode+' gt matrix created')
+
+    #         for sample in sample_list:
+    #             sid_phase = sample['sid'] + '_'+sample['phase']
+    #             # print(sid_phase)
+    #             if sid_phase == sid_mode:
+    #                 # print(sid_phase)
+    #                 points, p_labels = sample['pc_points'], sample['pc_labels']
+    #                 print(points[0])
+    #                 # print(p_labels.shape)
+    #                 train_matrix = make_points_voxels(points, scale, vector)
+    #                 print(sid_phase+' train matrix created')
+
+    #                 sid_list.append(sid_mode)
+    #                 train_matrixlist.append(train_matrix)
+    #                 gt_matrixlist.append(gt_matrix)
+    #                 p_list.append(points)
+    #                 p_labels_list.append(p_labels)
+    #                 vector_list.append(vector)
+    #                 scale_list.append(scale)
+    #                 print(sid_phase+' data created successfully')
+        
+
+

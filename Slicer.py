@@ -61,7 +61,7 @@ def make_csl_from_kbr(file_path, save_path, mode):
     # print(verts)
     model_name = 'kbr_'+mode+'_heart_' + info_list[0]['sid']
 
-    plane_normals, ds = _get_kbr_planes(info_list, cali_info, plane_scale, plane_vector, mode)
+    plane_normals, ds, trans_matrixs_list = _get_kbr_planes(info_list, cali_info, plane_scale, plane_vector, mode)
     plane_origins = [plane_origin_from_params((*n, d)) for n, d in zip(plane_normals, ds)]
 
 
@@ -92,27 +92,30 @@ def make_csl_from_kbr_without_ref(file_path, save_path, mode):
     # plane_scale *= np.max(np.absolute(verts))
     # # # print(plane_scale)
     # verts /= plane_scale
-    print(verts.max())
-    print(verts.min())
+    # print(verts.max())
+    # print(verts.min())
     model_name = 'kbr_'+mode+'_heart_' + info_list[0]['sid']
 
-    plane_normals, ds = _get_kbr_planes(info_list, cali_info, plane_scale, plane_vector, mode)
-    print(plane_normals)
-    print(ds)
+    plane_normals, ds, trans_matrixs_list= _get_kbr_planes(info_list, cali_info, plane_scale, plane_vector, mode)
+    # print(plane_normals)
+    # print(ds)
     plane_origins = [plane_origin_from_params((*n, d)) for n, d in zip(plane_normals, ds)]
 
 
-    poly_faces = [[3, a, b, c ] for a, b, c in faces]
-    mesh_poly = pv.PolyData(verts, poly_faces)
-    pl = pv.Plotter()
-    pl.add_mesh(mesh_poly, show_edges=True, color= 'red')
-    pl.add_axes(line_width=5, box=True)
-    for normal, origin in zip(plane_normals, plane_origins):
-        pl.add_mesh(pv.Plane(origin, normal, i_size=500, j_size=500))
-    pl.show()
+    # poly_faces = [[3, a, b, c ] for a, b, c in faces]
+    # mesh_poly = pv.PolyData(verts, poly_faces)
+    # pl = pv.Plotter()
+    # pl.add_mesh(mesh_poly, show_edges=True, color= 'red')
+    # pl.add_axes(line_width=5, box=True)
+    # for normal, origin in zip(plane_normals, plane_origins):
+    #     pl.add_mesh(pv.Plane(origin, normal, i_size=500, j_size=500))
+    # pl.show()
     
     ccs_per_plane = [cross_section(verts, faces, plane_orig=o, plane_normal=n) for o, n in tqdm(list(zip(plane_origins, plane_normals)))]
-    
+    # print('ccs_per_plane len:', len(ccs_per_plane))
+    # print('ccs type:', type(ccs_per_plane[0][0]))
+    # print('ccs 0:', ccs_per_plane[0][0])
+    print('ccs 0 shape:', ccs_per_plane[0][0].shape)
     csl = _csl_from_mesh(model_name, plane_origins, plane_normals, ds, ccs_per_plane)
 
     _save_sliced_mesh(csl, faces, model_name, save_path, verts)
@@ -126,7 +129,7 @@ def _save_sliced_mesh(csl, faces, model_name, save_path, verts):
         for j in range(3):
             my_mesh.vectors[i][j] = verts[f[j], :]
 
-    print(my_mesh)
+    # print(my_mesh)
     my_mesh.save(os.path.join(save_path, f'{model_name}.stl'))
     csl.to_ply(os.path.join(save_path, f'{model_name}.ply'))
     csl.to_file(os.path.join(save_path, f'{model_name}.csl'))
@@ -192,7 +195,7 @@ def _get_kbr_planes(info_list, cali_info, plane_scale, plane_vector, mode):
 
     normals = np.array(normal_list)
     ds = np.array(d_list)
-    return normals, ds
+    return normals, ds, trans_matrixs_list
 
 def _plane_from_mesh(ccs, plane_params, normal, origin, plane_id, csl):
     connected_components = []
@@ -313,17 +316,32 @@ if __name__ == '__main__':
     # es_mode = 'es'
     # csl_es = make_csl_from_kbr(input_path, out_path, es_mode)
 
+    # for filename in os.listdir('/staff/ydli/projects/OReX/Data/kbr_patient_backup'):
+    #     # print(filename)
+    #     input_path = '/staff/ydli/projects/OReX/Data/kbr_patient_backup/' + filename
+    #     out_path = '/staff/ydli/projects/OReX/Data/kbr_w/o_ref_test'
+    #     # print(input_path)
+    #     # break
+    #     print(f'Slicing ' + filename)
+    #     try:
+    #         ed_mode = 'ed'
+    #         csl_ed = make_csl_from_kbr_without_ref(input_path, out_path, ed_mode)
+    #         es_mode = 'es'
+    #         csl_es = make_csl_from_kbr_without_ref(input_path, out_path, es_mode)
+    #     except:
+    #         print('slice error')
+
     for filename in os.listdir('/staff/ydli/projects/OReX/Data/kbr_patient_backup'):
         # print(filename)
-        input_path = '/staff/ydli/projects/OReX/Data/kbr_patient_backup/' + filename
-        out_path = '/staff/ydli/projects/OReX/Data/kbr_backup'
+        input_path = '/staff/ydli/projects/OReX/Data/kbr_patient_backup/' + 'VpStudy_SID_3042_10280.xml'
+        out_path = '/staff/ydli/projects/OReX/Data/kbr_wo_ref_test'
         # print(input_path)
         # break
         print(f'Slicing ' + filename)
-        try:
-            ed_mode = 'ed'
-            csl_ed = make_csl_from_kbr(input_path, out_path, ed_mode)
-            es_mode = 'es'
-            csl_es = make_csl_from_kbr(input_path, out_path, es_mode)
-        except:
-            print('slice error')
+        ed_mode = 'ed'
+        csl_ed = make_csl_from_kbr_without_ref(input_path, out_path, ed_mode)
+        es_mode = 'es'
+        csl_es = make_csl_from_kbr_without_ref(input_path, out_path, es_mode)
+
+        break
+

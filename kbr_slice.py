@@ -4,6 +4,7 @@ import open3d as o3d
 from xml_reader import parseXml
 from trimesh import Trimesh
 from trimesh.sample import sample_surface
+from trimesh.voxel import creation
 from Dataset.CSL import CSL
 
 from scipy.spatial import ConvexHull
@@ -67,13 +68,13 @@ if __name__ == '__main__':
     plotter.show()
     
     '''
-    filename =  '/staff/ydli/projects/OReX/Data/kbr_patient_backup/VpStudy_SID_3042_10280.xml' # '/staff/ydli/projects/OReX/trash/kbr_ed_heart_SID_3042_10280.ply' # '/staff/ydli/projects/OReX/VpStudy_bak.xml'
+    filename =  '/staff/ydli/projects/OReX/Data/kbr_patient_backup/VpStudy_SID_3039_16640.xml' # '/staff/ydli/projects/OReX/trash/kbr_ed_heart_SID_3042_10280.ply' # '/staff/ydli/projects/OReX/VpStudy_bak.xml'
 
     # reader = pv.get_reader(filename)
     # mesh = reader.read()
 
     info_list, cali_info, mesh_text = parseXml(filename)
-    verts, faces = read_kbr_mesh(mesh_text['es'])
+    verts, faces = read_kbr_mesh(mesh_text['ed'])
     # pcd = o3d.io.read_point_cloud(filename)
     # verts -= np.mean(verts, axis=0)
     # scale = 1.1
@@ -84,8 +85,14 @@ if __name__ == '__main__':
     # obj_name = '/staff/ydli/projects/OReX/mesh_last_300.obj'
     # reader_obj = pv.get_reader(obj_name)
     # mesh = o3d.io.read_triangle_mesh(obj_name)# reader_obj.read()
-    # mesh = Trimesh(verts, faces) # reader.read() # 
-    # print(mesh)
+    
+    verts -= np.mean(verts, axis=0)
+    scale = 1.1
+    verts /= scale * np.max(np.absolute(verts))
+    # print(verts)
+    mesh = Trimesh(verts, faces)
+    voxels = creation.local_voxelize(mesh, mesh.centroid, pitch=0.005, radius=128, fill=True)
+    voxels.show()
     # mesh.scale(1 / np.max(mesh.get_max_bound() - mesh.get_min_bound()),
     #        center=mesh.get_center())
     # o3d.visualization.draw_geometries([mesh])
@@ -103,15 +110,13 @@ if __name__ == '__main__':
     # hull = ConvexHull(verts * (1 + 0.05))
     # mesh = Trimesh(hull.points, hull.simplices)
     # verts = sample_surface(Trimesh(hull.points, hull.simplices), 2 ** 14)
-    pv.plot(
-    verts,
-    scalars=verts[:, 2],
-    render_points_as_spheres=True,
-    point_size=20,
-    show_scalar_bar=False,
-)
-    # pl = pv.Plotter()
-    # pl.add_mesh(mesh, show_edges=True, color= 'white')
-    # pl.show()
+#     pv.plot(
+#     verts,
+#     scalars=verts[:, 2],
+#     render_points_as_spheres=True,
+#     point_size=20,
+#     show_scalar_bar=False,
+# )
+    
     # boundary_xyzs = np.array(sample_surface(Trimesh(hull.points, hull.simplices), args.n_samples_boundary)[0])
     # return boundary_xyzs
