@@ -246,43 +246,117 @@ def make_kbr_profile_image_mesh2voxels(filename, scale, vector):
     pitch = 0.016
 
     # print(type(scaled_mesh.vertices))
-    for i in range(len(scaled_mesh.vertices)):
-        p1 = scaled_mesh.vertices[i]
-        p2 = scaled_mesh.vertices[(i + 1) % len(scaled_mesh.vertices)]  # 下一个点，循环回到首点
-        print((i + 1) % len(scaled_mesh.vertices))
-        print(len(scaled_mesh.vertices))
-        # print(p1)
-        # print(p2)
-        # # x, y, z = point
+    for point in scaled_mesh.vertices:
+        x, y, z = point
 
-        # voxel_x = int((x / pitch) + (shape[0] - 1) / 2)
-        # voxel_y = int((y / pitch) + (shape[1] - 1) / 2)
-        # voxel_z = int((z / pitch) + (shape[2] - 1) / 2)
-        # if 0 <= voxel_x < shape[0] and 0 <= voxel_y < shape[1] and 0 <= voxel_z < shape[2]:
-        #     voxel_array[voxel_x, voxel_y, voxel_z] = 1
-            # print(voxel_x, voxel_y, voxel_z)
-        
-        x1, y1, z1 = p1
-        x2, y2, z2 = p2
+        voxel_x = int((x / pitch) + (shape[0] - 1) / 2)
+        voxel_y = int((y / pitch) + (shape[1] - 1) / 2)
+        voxel_z = int((z / pitch) + (shape[2] - 1) / 2)
+        if 0 <= voxel_x < shape[0] and 0 <= voxel_y < shape[1] and 0 <= voxel_z < shape[2]:
+            voxel_array[voxel_x, voxel_y, voxel_z] = 1
+    voxel_array = np.delete(voxel_array, 0, 0)
+    voxel_array = np.delete(voxel_array, 0, 1)
+    voxel_array = np.delete(voxel_array, 0, 2)
+    # print(voxel_array.shape)
+    count_true = np.sum(voxel_array)
+    print('count_true:', count_true)
+    output_matrix = np.stack([matrix, voxel_array])
+    # output matrix with shape:(512, 512, 512) filled with True&False
+    # print(output_matrix.shape)
 
-        direction_vector = p1 - p2
-        length = np.linalg.norm(direction_vector)
-        num_samples = int(length / pitch) + 1
-        # print(num_samples)
+    return output_matrix
 
-        for i in range(num_samples):
+def make_kbr_profile_line_image_mesh2voxels(ply_filename, csl_filename, scale, vector):
+    '''
+    read kbr plane mesh(train data) from ply,
+    create a convex mesh for this mesh,
+    then output a np.array (N, 3) which represents the voxels of this mesh
+    '''
+
+    # Load the .ply file
+    mesh = trimesh.load_mesh(ply_filename)
+
+    # mesh.show()
+    # # Create the convex hull
+    # convex_hull = mesh.convex_hull
+    # # print(np.mean(np.asarray(convex_hull.vertices), axis=0))
+    # # print(np.asarray(convex_hull.vertices).max())
+    # # print(np.asarray(convex_hull.vertices).min())
+    # moved_mesh = convex_hull.apply_translation(-vector)
+    # # print(np.mean(np.asarray(moved_mesh.vertices), axis=0))
+    # # print(np.asarray(moved_mesh.vertices).max())
+    # # print(np.asarray(moved_mesh.vertices).min())
+    # scaled_mesh = moved_mesh.apply_scale(1/scale)
+    # # print(np.mean(np.asarray(scaled_mesh.vertices), axis=0))
+    # # print(np.asarray(scaled_mesh.vertices).max())
+    # # print(np.asarray(scaled_mesh.vertices).min())
+    # # print(type(convex_hull))
+
+    # Create the mesh
+    # print(np.mean(np.asarray(convex_hull.vertices), axis=0))
+    # print(np.asarray(convex_hull.vertices).max())
+    # print(np.asarray(convex_hull.vertices).min())
+    moved_mesh = mesh.apply_translation(-vector)
+    # print(np.mean(np.asarray(moved_mesh.vertices), axis=0))
+    # print(np.asarray(moved_mesh.vertices).max())
+    # print(np.asarray(moved_mesh.vertices).min())
+    scaled_mesh = moved_mesh.apply_scale(1/scale)
+    # print(np.mean(np.asarray(scaled_mesh.vertices), axis=0))
+    # print(np.asarray(scaled_mesh.vertices).max())
+    # print(np.asarray(scaled_mesh.vertices).min())
+    # print(type(convex_hull))
+    convex_hull = scaled_mesh.convex_hull
+
+    origin = np.zeros((3,))
+    voxels = creation.local_voxelize(convex_hull, origin, pitch=0.016, radius=64, fill=True)
+    # voxels = creation.local_voxelize(scaled_mesh, origin, pitch=0.008, radius=128, fill=True)
+    matrix = voxels.matrix
+    matrix = np.delete(matrix, 0, 0)
+    matrix = np.delete(matrix, 0, 1)
+    matrix = np.delete(matrix, 0, 2)
+    # print(matrix.shape)
+
+
+    shape = (129, 129, 129)
+    voxel_array = np.zeros(shape)
+    pitch = 0.016
+
+    plane_verts_list = []
+
+    csl =  CSL.from_csl_file(csl_filename)
+    for plane in csl.planes:
+        plane_verts = plane.vertices
+        plane_verts -= vector
+        plane_verts /= scale
+
+        plane_verts_list.append(plane_verts)
+    # print(type(scaled_mesh.vertices))
+    for plane_verts in plane_verts_list:
+        for i in range(plane_verts.shape[0]):
+            p1 = plane_verts[i]
+            p2 = plane_verts[(i + 1) % plane_verts.shape[0]]  # 下一个点，循环回到首点
+            # print((i + 1) % plane_verts.shape[0])
+            # print(plane_verts.shape[0])
+            # print(plane_verts[0])
             
-            if num_samples == 1:
-                t = 0.0
-            else:
-                t = i / (num_samples - 1)
-            point = p1 + t * direction_vector
-            voxel_index = ((point / pitch) + (np.array(shape) - 1) / 2).astype(int)
-            # print(voxel_index)
-            voxel_array[voxel_index[0], voxel_index[1], voxel_index[2]] = 1
-        
-        # print(voxel_x_min, voxel_y_min, voxel_z_min)
-        # print(voxel_x_max, voxel_y_max, voxel_z_max)
+            direction_vector = p1 - p2
+            length = np.linalg.norm(direction_vector)
+            num_samples = int(length / pitch) + 1
+            # print(num_samples)
+
+            for i in range(num_samples):
+                
+                if num_samples == 1:
+                    t = 0.0
+                else:
+                    t = i / (num_samples - 1)
+                point = p1 + t * direction_vector
+                voxel_index = ((point / pitch) + (np.array(shape) - 1) / 2).astype(int)
+                # print(voxel_index)
+                voxel_array[voxel_index[0], voxel_index[1], voxel_index[2]] = 1
+            
+            # print(voxel_x_min, voxel_y_min, voxel_z_min)
+            # print(voxel_x_max, voxel_y_max, voxel_z_max)
 
         # if 0 <= voxel_x_min < shape[0] and 0 <= voxel_x_max < shape[1] and 0 <= voxel_y_min < shape[1] and 0 <= voxel_y_max < shape[1] and 0 <= voxel_z_min < shape[1] and 0 <= voxel_z_max < shape[2]:
         #     voxel_array[x_min:x_max+1, y_min:y_max+1, z_min:z_max+1] = 1
@@ -579,14 +653,16 @@ def make_hdf5_for_UNet(gt_filepath, train_filepath, mode_list):
 
             else:
                 try:
-                    id_file = train_filepath +'/*' +sid+'.ply'
+                    ply_id_file = train_filepath +'/*' +sid+'.ply'
+                    csl_id_file = train_filepath +'/*' +sid+'.csl'
                     # len_file=len(glob.glob(id_file))
                     # print(len_file)
-                    for file in glob.glob(id_file):
-                        if mode in file:
-                            ply_file = file
-                            train_matrix = make_kbr_profile_image_mesh2voxels(ply_file, scale, vector)
-                            print(sid_mode+' train matrix file created')
+                    for ply_file in glob.glob(ply_id_file):
+                        if mode in ply_file:
+                            for csl_file in glob.glob(csl_id_file):
+                                if mode in csl_file:
+                                    train_matrix = make_kbr_profile_line_image_mesh2voxels(ply_file, csl_file, scale, vector) # make_kbr_profile_line_image_mesh2voxels(ply_file, csl_file, scale, vector)
+                                    print(sid_mode+' train matrix file created')
                 except:
                     print(' error: '+sid_mode+' train matrix not created')
                     print(sid_mode+' data created failed')
@@ -597,7 +673,7 @@ def make_hdf5_for_UNet(gt_filepath, train_filepath, mode_list):
                     gt_matrixlist.append(gt_matrix)
                     print(sid_mode+' data created successfully')
      
-    unet_path = '/staff/ydli/projects/OReX/Data/UNet/hdf5_profile_mesh_128_backup'
+    unet_path = '/staff/ydli/projects/OReX/Data/UNet/hdf5_profile_line_128_backup'
     if not os.path.exists(unet_path):
         os.makedirs(unet_path)
 
@@ -773,48 +849,50 @@ if __name__ == '__main__':
 
     csv_filepath = '/staff/wangzhaohui/codes/flownet3d_pytorch/instance/kbr_mesh_pc/info_list.csv'
 
-    # # ## Test failed file
+    # # ## Test failed file 3039_10770_es
 
-    for filename in os.listdir(gt_filepath):
+    # for filename in os.listdir(gt_filepath):
         
-        xml_file = gt_filepath+'/'+filename
-        # print(filename)
-        # filename is like 'VpStudy_SID_3042_10280.xml'
-        sid = filename.split('_')[-1].split('.')[0]
-        # print(sid) # sid = '10280'
-        sid = 'SID' + '_' + filename.split('_')[-2] + '_' + sid   
-        # print(sid) # sid = 'SID_3042_10280'
+    #     xml_file = gt_filepath+'/'+filename
+    #     # print(filename)
+    #     # filename is like 'VpStudy_SID_3042_10280.xml'
+    #     sid = filename.split('_')[-1].split('.')[0]
+    #     # print(sid) # sid = '10280'
+    #     sid = 'SID' + '_' + filename.split('_')[-2] + '_' + sid   
+    #     # print(sid) # sid = 'SID_3042_10280'
 
-        for mode in mode_list: # mode 'es'&'ed'
-            # make es&ed gt data .txt file
-            sid_mode = sid + '_' + mode
+    #     for mode in mode_list: # mode 'es'&'ed'
+    #         # make es&ed gt data .txt file
+    #         sid_mode = sid + '_' + mode
             
-            gt_matrix, scale, vector = make_kbr_label_mesh2voxels(xml_file, mode)
-            print(sid_mode+' gt matrix created')
+    #         gt_matrix, scale, vector = make_kbr_label_mesh2voxels(xml_file, mode)
+    #         print(sid_mode+' gt matrix created')
 
-            id_file = train_filepath +'/*' +sid+'.ply'
-            # len_file=len(glob.glob(id_file))
-            # print(len_file)
-            for file in glob.glob(id_file):
-                if mode in file:
-                    ply_file = file
-                    train_matrix = make_kbr_profile_image_mesh2voxels(ply_file, scale, vector)
-                    print(sid_mode+' train matrix file created')
+    #         ply_id_file = train_filepath +'/*' +sid+'.ply'
+    #         csl_id_file = train_filepath +'/*' +sid+'.csl'
+    #         # len_file=len(glob.glob(id_file))
+    #         # print(len_file)
+    #         for ply_file in glob.glob(ply_id_file):
+    #             if mode in ply_file:
+    #                 for csl_file in glob.glob(csl_id_file):
+    #                     if mode in csl_file:
+    #                         train_matrix = make_kbr_profile_line_image_mesh2voxels(ply_file, csl_file, scale, vector) # make_kbr_profile_line_image_mesh2voxels(ply_file, csl_file, scale, vector)
+    #                         print(sid_mode+' train matrix file created')
 
-        unet_path = '/staff/ydli/projects/OReX/Data/UNet/hdf5_profile_mesh_128_backup'
-        if not os.path.exists(unet_path):
-            os.makedirs(unet_path)
+    #     unet_path = '/staff/ydli/projects/OReX/Data/UNet/hdf5_profile_line_128_backup'
+    #     if not os.path.exists(unet_path):
+    #         os.makedirs(unet_path)
 
 
-        hdf5_path = unet_path+'/'+sid+'.hdf5'
-        hdf5_file = h5py.File(hdf5_path, 'w')
-        hdf5_file.create_dataset('image', data=train_matrix.astype(np.int16))
-        hdf5_file.create_dataset('label', data=gt_matrix.astype(np.uint8))
-        hdf5_file.create_dataset('scale', data=scale.astype(np.float32))
-        hdf5_file.close()
-        print('create '+sid+' hdf5 file success!')
+    #     hdf5_path = unet_path+'/'+sid+'.hdf5'
+    #     hdf5_file = h5py.File(hdf5_path, 'w')
+    #     hdf5_file.create_dataset('image', data=train_matrix.astype(np.int16))
+    #     hdf5_file.create_dataset('label', data=gt_matrix.astype(np.uint8))
+    #     hdf5_file.create_dataset('scale', data=scale.astype(np.float32))
+    #     hdf5_file.close()
+    #     print('create '+sid+' hdf5 file success!')
 
-        break
+    #     break
 
     # # make the .txt file
     # make_txt_file_for_UNet(gt_filepath, train_filepath, mode_list, data_path)
@@ -826,8 +904,8 @@ if __name__ == '__main__':
     # read_pickle_saveas_hdf5(mode_list, data_path)
 
 
-    # # make .hdf5 file for UNet from .ply&.xml(without ref)
-    # make_hdf5_for_UNet(gt_filepath, train_filepath, mode_list)
+    # make .hdf5 file for UNet from .ply&.xml(without ref)
+    make_hdf5_for_UNet(gt_filepath, train_filepath, mode_list)
 
     # make .hdf5 file for UNet from .ply&.xml(without ref)
     # make_points_hdf5_for_UNet(gt_filepath, csv_filepath, mode_list)

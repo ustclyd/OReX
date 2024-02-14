@@ -1,6 +1,6 @@
 import argparse
 import os
-
+import random
 import shutil
 import pyvista as pv
 import numpy as np
@@ -121,6 +121,46 @@ def make_csl_from_kbr_without_ref(file_path, save_path, mode):
     _save_sliced_mesh(csl, faces, model_name, save_path, verts)
     return csl
 
+def make_csl_from_kbr_without_ref_remove_m(file_path, save_path, mode, remove_num):
+    info_list, cali_info, mesh_text = parseXml(file_path)
+    # print(info_list[1]['sid'])
+    verts, faces, = read_kbr_mesh(mesh_text[mode])
+    plane_vector = np.zeros((3, ))
+    # verts -= plane_vector
+    # print(plane_vector)
+    plane_scale = 1
+    # plane_scale *= np.max(np.absolute(verts))
+    # # # print(plane_scale)
+    # verts /= plane_scale
+    # print(verts.max())
+    # print(verts.min())
+    model_name = 'kbr_'+mode+'_heart_' + info_list[0]['sid']
+
+    plane_normals, ds, trans_matrixs_list= _get_kbr_planes_remove_m(info_list, cali_info, plane_scale, plane_vector, mode, remove_num)
+    # print(plane_normals)
+    # print(ds)
+    plane_origins = [plane_origin_from_params((*n, d)) for n, d in zip(plane_normals, ds)]
+
+
+    # poly_faces = [[3, a, b, c ] for a, b, c in faces]
+    # mesh_poly = pv.PolyData(verts, poly_faces)
+    # pl = pv.Plotter()
+    # pl.add_mesh(mesh_poly, show_edges=True, color= 'red')
+    # pl.add_axes(line_width=5, box=True)
+    # for normal, origin in zip(plane_normals, plane_origins):
+    #     pl.add_mesh(pv.Plane(origin, normal, i_size=500, j_size=500))
+    # pl.show()
+    
+    ccs_per_plane = [cross_section(verts, faces, plane_orig=o, plane_normal=n) for o, n in tqdm(list(zip(plane_origins, plane_normals)))]
+    # print('ccs_per_plane len:', len(ccs_per_plane))
+    # print('ccs type:', type(ccs_per_plane[0][0]))
+    # print('ccs 0:', ccs_per_plane[0][0])
+    # print('ccs 0 shape:', ccs_per_plane[0][0].shape)
+    csl = _csl_from_mesh(model_name, plane_origins, plane_normals, ds, ccs_per_plane)
+
+    _save_sliced_mesh(csl, faces, model_name, save_path, verts)
+    return csl
+
 def _save_sliced_mesh(csl, faces, model_name, save_path, verts):
 
     my_mesh = mesh2.Mesh(np.zeros(len(faces), dtype=mesh2.Mesh.dtype))
@@ -186,6 +226,69 @@ def _get_kbr_planes(info_list, cali_info, plane_scale, plane_vector, mode):
         trans_matrix -= i_matrix
         trans_matrix = np.dot(s_matrix, trans_matrix)
         trans_matrixs_list.append(trans_matrix)
+
+    for matrix in trans_matrixs_list:
+        normal, d = read_kbr_plane(matrix)
+        # d /= plane_scale
+        normal_list.append(normal)
+        d_list.append(d)
+
+    normals = np.array(normal_list)
+    ds = np.array(d_list)
+    return normals, ds, trans_matrixs_list
+
+def _get_kbr_planes_remove_m(info_list, cali_info, plane_scale, plane_vector, mode, remove_num):
+    # return plane's normals and ds
+
+    trans_matrixs_list = []
+    normal_list = []
+    d_list = []
+
+    # t_matrix = np.zeros((4,4))
+    # t_matrix[[0,1,2,3], [2,1,0,3]] = 1
+    # print(t_matrix)
+
+    i_matrix = np.zeros((4, 3))
+    # print(i_matrix)
+    plane_vector = np.insert(plane_vector, 3, 0)
+    plane_vector = plane_vector.T
+    # print(plane_vector)
+    i_matrix = np.insert(i_matrix, 3, plane_vector, axis=1)
+    # print('i_matrix')
+    # print(i_matrix)
+
+    s_matrix = np.eye(4)
+    s_matrix[:3,:3] = s_matrix[:3,:3] / plane_scale
+
+    remove_ids  = random.sample(range(len(info_list)), remove_num)
+    print(remove_ids)
+
+    for i in range(len(info_list)):
+        if i not in remove_ids:
+            plane = info_list[i]
+
+            depth_label = plane['depth_label']
+            enablePatientMovementCorrection = 0
+            patient_sensor_orientation = np.array(plane[mode+'_patient_orientation'])[[3,0,1,2]]
+            patient_initial_orientation = np.array(plane['init_patient_orientation'])[[3,0,1,2]]
+            sensor_orientation = np.array(plane[mode+'_sensor_orientation'])[[3,0,1,2]]
+            patient_sensor_position = np.array(plane[mode+'_patient_location'])
+            patient_initial_position = np.array(plane['init_patient_location'])
+            sensor_posiotion = np.array(plane[mode+'_sensor_location'])
+            c_orien_matrix = np.reshape(cali_info['calibration_rotation_matrix'], (3,3))
+            c_pos_vector = np.array(cali_info['calibration_translation_vector'])
+            for depth in cali_info['depth_list']:
+                if depth['depth_label'] == depth_label:
+                    depth_XMillimetersPerPixel = depth['x_millmeter_per_pixel']
+                    depth_YMillimetersPerPixel = depth['y_millmeter_per_pixel']
+                    depth_OriginPixel_X = depth['origin_x']
+                    depth_OriginPixel_Y = depth['origin_y']
+            # print(plane_scale)
+            trans_matrix = make_plane_transform(enablePatientMovementCorrection, patient_sensor_orientation, patient_initial_orientation, sensor_orientation, patient_sensor_position, patient_initial_position, sensor_posiotion, c_orien_matrix, c_pos_vector, depth_XMillimetersPerPixel, depth_YMillimetersPerPixel, depth_OriginPixel_X, depth_OriginPixel_Y)
+            # trans_matrix = np.dot(t_matrix, trans_matrix)
+            trans_matrix -= i_matrix
+            trans_matrix = np.dot(s_matrix, trans_matrix)
+            trans_matrixs_list.append(trans_matrix)
 
     for matrix in trans_matrixs_list:
         normal, d = read_kbr_plane(matrix)
@@ -333,15 +436,17 @@ if __name__ == '__main__':
 
     for filename in os.listdir('/staff/ydli/projects/OReX/Data/kbr_patient_backup'):
         # print(filename)
-        input_path = '/staff/ydli/projects/OReX/Data/kbr_patient_backup/' + 'VpStudy_SID_3042_10280.xml'
-        out_path = '/staff/ydli/projects/OReX/Data/kbr_wo_ref_test'
-        # print(input_path)
-        # break
-        print(f'Slicing ' + filename)
-        ed_mode = 'ed'
-        csl_ed = make_csl_from_kbr_without_ref(input_path, out_path, ed_mode)
-        es_mode = 'es'
-        csl_es = make_csl_from_kbr_without_ref(input_path, out_path, es_mode)
-
-        break
-
+        try:
+            input_path = '/staff/ydli/projects/OReX/Data/kbr_patient_backup/'+filename
+            out_path = '/staff/ydli/projects/OReX/Data/kbr_wo_ref_remove_4'
+            # print(input_path)
+            print(f'Slicing ' + filename)
+            remove_num = 4
+            ed_mode = 'ed'
+            csl_ed = make_csl_from_kbr_without_ref_remove_m(input_path, out_path, ed_mode, remove_num)
+            print(f'Slicing ' + filename+' ed success')
+            es_mode = 'es'
+            csl_es = make_csl_from_kbr_without_ref_remove_m(input_path, out_path, es_mode, remove_num)
+            print(f'Slicing ' + filename+' es success')
+        except:
+            print(f'Slicing ' + filename+' failed')
